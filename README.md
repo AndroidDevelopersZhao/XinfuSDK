@@ -1,2 +1,0 @@
-# XinfuSDK
-SDK-libs
