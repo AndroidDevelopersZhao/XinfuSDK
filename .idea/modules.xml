@@ -2,8 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Example/app.iml" filepath="$PROJECT_DIR$/Example/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Example/Example.iml" filepath="$PROJECT_DIR$/Example/Example.iml" />
       <module fileurl="file://$PROJECT_DIR$/W280pSDK.iml" filepath="$PROJECT_DIR$/W280pSDK.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Example/app.iml" filepath="$PROJECT_DIR$/Example/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/xinfusdk_w280p2/xinfusdk_w280p2.iml" filepath="$PROJECT_DIR$/xinfusdk_w280p2/xinfusdk_w280p2.iml" />
     </modules>
   </component>
