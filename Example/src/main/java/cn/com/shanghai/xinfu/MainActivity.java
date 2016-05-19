@@ -1,5 +1,6 @@
 package cn.com.shanghai.xinfu;
 
+import android.os.SystemClock;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -26,11 +27,11 @@ public class MainActivity extends AppCompatActivity {
                         + "\nbn:" + deviceInfo.getTermBn()
                         + "\nmn:" + deviceInfo.getTermMn()
                         + "\nmr:" + deviceInfo.getMerId());
-
                 xinfuSDK.doSign(deviceInfo, new OnSign() {
                     @Override
                     public void onSucc() {
                         app("签到成功");
+                        SystemClock.sleep(3000);
                         app("请刷卡");
                         ConsumeData consumeData = new ConsumeData();
                         consumeData.setAmount("100");
@@ -41,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void onSucc(TransMessage transMessage) {
                                 app("消费成功,quid:" + transMessage.getQueryId());
+                                //060173160519175344192056044201
                             }
 
                             @Override

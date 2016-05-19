@@ -1,5 +1,6 @@
 package cn.com.shanghai.xinfusdk_w280p.businessprocessing;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.SystemClock;
@@ -263,26 +264,27 @@ public class W280pDevice implements SDK {
 
                                 Utils.getMac(TMK, macKey_e, macKey_CV, b, new onGetMac() {
                                     @Override
-                                    public void onSucc(String mac) {
-                                        Utils.uploadTransData(context, map, mac.toLowerCase(), "Consume", consumeData.getTimeOut_Internet(), new OnUploadTransDataListener() {
-                                            @Override
-                                            public void onSucc(TransMessage transMessage) {
-                                                if (transMessage.getRespCode().equals("00")) {
-                                                    Log.d("consume successful in " + useTime() + " ms.");
-                                                    Log.d("consume success,data was resped");
-                                                    consumeListener.onSucc(transMessage);
-                                                } else {
-                                                    Log.e("consume was error," + transMessage.getRespMsg());
-                                                    consumeListener.onError(transMessage.getRespMsg());
-                                                }
-                                            }
+                                    public void onSucc(final String mac) {
+                                                Utils.uploadTransData(context, map, mac.toLowerCase(), "Consume", consumeData.getTimeOut_Internet(), new OnUploadTransDataListener() {
+                                                    @Override
+                                                    public void onSucc(TransMessage transMessage) {
+                                                        if (transMessage.getRespCode().equals("00")) {
+                                                            Log.d("consume successful in " + useTime() + " ms.");
+                                                            Log.d("consume success,data was resped");
+                                                            consumeListener.onSucc(transMessage);
+                                                        } else {
+                                                            Log.e("consume was error," + transMessage.getRespMsg());
+                                                            consumeListener.onError(transMessage.getRespMsg());
+                                                        }
+                                                    }
 
-                                            @Override
-                                            public void onError(String errorMsg) {
-                                                Log.e("consume was error:" + errorMsg);
-                                                consumeListener.onError(errorMsg);
-                                            }
-                                        });
+                                                    @Override
+                                                    public void onError(String errorMsg) {
+                                                        Log.e("consume was error:" + errorMsg);
+                                                        consumeListener.onError(errorMsg);
+                                                    }
+                                                });
+
                                     }
 
                                     @Override

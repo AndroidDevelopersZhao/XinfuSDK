@@ -3,14 +3,6 @@ package cn.com.shanghai.xinfusdk_w280p.utils;
 import android.content.Context;
 import android.text.format.Time;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.DefaultRetryPolicy;
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
 import com.google.gson.Gson;
 
 import java.security.InvalidKeyException;
@@ -31,6 +23,14 @@ import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnUploadTransDataListene
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.onGetMac;
 import cn.com.shanghai.xinfusdk_w280p.usexor.DefaultP;
 import cn.com.shanghai.xinfusdk_w280p.usexor.TransType;
+import cn.com.shanghai.xinfusdk_w280p.volley.AuthFailureError;
+import cn.com.shanghai.xinfusdk_w280p.volley.DefaultRetryPolicy;
+import cn.com.shanghai.xinfusdk_w280p.volley.Request;
+import cn.com.shanghai.xinfusdk_w280p.volley.RequestQueue;
+import cn.com.shanghai.xinfusdk_w280p.volley.Response;
+import cn.com.shanghai.xinfusdk_w280p.volley.VolleyError;
+import cn.com.shanghai.xinfusdk_w280p.volley.toolbox.StringRequest;
+import cn.com.shanghai.xinfusdk_w280p.volley.toolbox.Volley;
 
 /**
  * Created by Administrator on 2016/5/19.
@@ -76,10 +76,7 @@ public class Utils {
         request.setTag(TAG);
         //当前签到超时时间为20秒，默认超时后重试一次
         request.setRetryPolicy(new DefaultRetryPolicy(20 * 1000, 1, 1.0f));
-        RequestQueue queue = getHttpQueue(context);
-        queue.add(request);
-        queue.start();
-
+        getHttpQueue(context).add(request);
     }
 
     public static RequestQueue getHttpQueue(Context context) {
@@ -286,7 +283,7 @@ public class Utils {
      * @param timeOutM                  超时时间-秒
      * @param onUploadTransDataListener 状态监听
      */
-    public static synchronized void uploadTransData(Context context, final TreeMap<String, String> map,
+    public static  void uploadTransData(Context context, final TreeMap<String, String> map,
                                                     final String mac, final String tag, int timeOutM,
                                                     final OnUploadTransDataListener onUploadTransDataListener) {
         StringRequest request = new StringRequest(Request.Method.POST,
@@ -321,11 +318,8 @@ public class Utils {
             }
         };
         request.setTag(tag);
-        //当前签到超时时间为20秒，默认超时后重试一次
         request.setRetryPolicy(new DefaultRetryPolicy(timeOutM * 1000, 1, 1.0f));
-        RequestQueue queue = Utils.getHttpQueue(context);
-        queue.add(request);
-        queue.start();
+        getHttpQueue(context).add(request);
     }
 
     /**
