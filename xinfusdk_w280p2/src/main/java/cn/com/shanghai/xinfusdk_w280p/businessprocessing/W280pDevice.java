@@ -4,25 +4,35 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.SystemClock;
+import android.text.format.Time;
 
 import com.google.gson.Gson;
 import com.landicorp.android.eptandapi.pinpad.Pinpad;
 import com.landicorp.android.eptapi.DeviceService;
+import com.landicorp.android.eptapi.emv.process.data.TransactionData;
 import com.landicorp.android.eptapi.exception.ReloginException;
 import com.landicorp.android.eptapi.exception.RequestException;
 import com.landicorp.android.eptapi.exception.ServiceOccupiedException;
 import com.landicorp.android.eptapi.exception.UnsupportMultiProcess;
+import com.landicorp.android.eptapi.utils.BytesUtil;
+import com.landicorp.emv.EmvChannel;
+import com.landicorp.emv.EmvConstant;
+import com.landicorp.emv.EmvTransData;
 import com.landicorp.entity.CardInfo;
 import com.landicorp.entity.KeyInfo;
 import com.landicorp.entity.PinPadConstant;
 import com.landicorp.impl.CardReaderProviderImpl;
+import com.landicorp.impl.EmvProviderImpl;
 import com.landicorp.impl.PinPadProviderImpl;
 import com.landicorp.listener.CardReaderListener;
+import com.landicorp.listener.EmvTransListener;
 import com.landicorp.listener.PinPadListener;
 import com.landicorp.util.ByteUtils;
+import com.landicorp.util.MakeField55;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -42,6 +52,8 @@ import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.onGetMac;
 import cn.com.shanghai.xinfusdk_w280p.usexor.DefaultP;
 import cn.com.shanghai.xinfusdk_w280p.usexor.SDK;
 import cn.com.shanghai.xinfusdk_w280p.usexor.TransType;
+import cn.com.shanghai.xinfusdk_w280p.utils.EmvParameterUtil;
+import cn.com.shanghai.xinfusdk_w280p.utils.KernelConstant;
 import cn.com.shanghai.xinfusdk_w280p.utils.Key;
 import cn.com.shanghai.xinfusdk_w280p.utils.Log;
 import cn.com.shanghai.xinfusdk_w280p.utils.MD5Util;
@@ -259,31 +271,31 @@ public class W280pDevice implements SDK {
                                 byte[] b = creatTransData_Consume_ShuaKa(consumeData, cardInfo, Utils.byteArratToHexString(bytes));
                                 String TMK = preferences.get(context, Key.MainKey, "").toString().trim();
                                 String macKey_e = preferences.get(context, Key.mackey, "").toString().trim();
-                                String macKey_CV = preferences.get(context,  Key.mackey_cv, "").toString().trim();
+                                String macKey_CV = preferences.get(context, Key.mackey_cv, "").toString().trim();
                                 Log.d("传入mac的值:\nTMK:" + TMK + "\nmackey:" + macKey_e + "\nmackeyCv:" + macKey_CV);
 
                                 Utils.getMac(TMK, macKey_e, macKey_CV, b, new onGetMac() {
                                     @Override
                                     public void onSucc(final String mac) {
-                                                Utils.uploadTransData(context, map, mac.toLowerCase(), "Consume", consumeData.getTimeOut_Internet(), new OnUploadTransDataListener() {
-                                                    @Override
-                                                    public void onSucc(TransMessage transMessage) {
-                                                        if (transMessage.getRespCode().equals("00")) {
-                                                            Log.d("consume successful in " + useTime() + " ms.");
-                                                            Log.d("consume success,data was resped");
-                                                            consumeListener.onSucc(transMessage);
-                                                        } else {
-                                                            Log.e("consume was error," + transMessage.getRespMsg());
-                                                            consumeListener.onError(transMessage.getRespMsg());
-                                                        }
-                                                    }
+                                        Utils.uploadTransData(context, map, mac.toLowerCase(), "Consume", consumeData.getTimeOut_Internet(), new OnUploadTransDataListener() {
+                                            @Override
+                                            public void onSucc(TransMessage transMessage) {
+                                                if (transMessage.getRespCode().equals("00")) {
+                                                    Log.d("consume successful in " + useTime() + " ms.");
+                                                    Log.d("consume success,data was resped");
+                                                    consumeListener.onSucc(transMessage);
+                                                } else {
+                                                    Log.e("consume was error," + transMessage.getRespMsg());
+                                                    consumeListener.onError(transMessage.getRespMsg());
+                                                }
+                                            }
 
-                                                    @Override
-                                                    public void onError(String errorMsg) {
-                                                        Log.e("consume was error:" + errorMsg);
-                                                        consumeListener.onError(errorMsg);
-                                                    }
-                                                });
+                                            @Override
+                                            public void onError(String errorMsg) {
+                                                Log.e("consume was error:" + errorMsg);
+                                                consumeListener.onError(errorMsg);
+                                            }
+                                        });
 
                                     }
 
@@ -306,7 +318,15 @@ public class W280pDevice implements SDK {
                         break;
                     case CardInfo.CARD_INSERT:
                         //IC卡
-
+                        Log.d("cardInfo-CardType:" + cardInfo.getCardType());
+                        Log.d("cardInfo-CardNo:" + cardInfo.getCardNo());
+                        Log.d("cardInfo-ExpDate:" + cardInfo.getExpDate());
+                        Log.d("cardInfo-ServiceCode:" + cardInfo.getServiceCode());
+                        Log.d("cardInfo-Track:" + cardInfo.getTrack());
+                        Log.d("cardInfo-Track1:" + cardInfo.getTrack1());
+                        Log.d("cardInfo-Track2:" + cardInfo.getTrack2());
+                        Log.d("cardInfo-Track3:" + cardInfo.getTrack3());
+                        doConsume_IC(consumeData,consumeListener,cardInfo);
                         break;
 
                     case CardInfo.CARD_CLSS:
@@ -339,7 +359,7 @@ public class W280pDevice implements SDK {
      * @param unConsumeListener 执行结果监听器
      */
     private void doUnConsume(UnConsumeData unConsumeData, OnUnConsumeListener unConsumeListener) {
-
+        //撤销交易
     }
     /************************************************************************************************/
     /********************************************工具部分**********************************************/
@@ -367,10 +387,10 @@ public class W280pDevice implements SDK {
         int pinpadret = PinPadProviderImpl.loadKey(keyInfo);
         if (pinpadret == 0) {
             Log.d("mainkey load success");
-            if (preferences==null){
-                preferences=new XXSharedPreferences(DefaultP.FILE_NAME_DEVICE_INFO_SHAREDPREFERENCE);
+            if (preferences == null) {
+                preferences = new XXSharedPreferences(DefaultP.FILE_NAME_DEVICE_INFO_SHAREDPREFERENCE);
             }
-            preferences.put(context,Key.MainKey,DefaultP.MainKey);
+            preferences.put(context, Key.MainKey, DefaultP.MainKey);
         } else {
             Log.e("load mainkey was error");
         }
@@ -408,7 +428,7 @@ public class W280pDevice implements SDK {
         map.put("merId", consumeData.getDeviceInfo().getMerId());    //商户号	merId	M
         map.put("orderId", Utils.getTransTime(TransType.UnKnow));    //商户订单号	orderId	M	同一商户同一交易日内唯一
         map.put("txnTime", Utils.getSysTime_24());    //订单发送时间	txnTime	M	当前时间，同一终端不应出现相同发送时间的交易请求
-        map.put("txnAmt", "000000001000");    //交易金额	txnAmt	M
+        map.put("txnAmt", Utils.getTransAmount(consumeData.getAmount()));    //交易金额	txnAmt	M
         map.put("currencyCode", "156");    //交易币种	currencyCode	M
 //        if (consumeModle.getOrderMsg() != null && !consumeModle.getOrderMsg().equals("")) {
 //            map.put("orderDesc", consumeModle.getOrderMsg());    //订单描述	orderDesc	O
@@ -430,5 +450,231 @@ public class W280pDevice implements SDK {
         Log.d("刷卡报文：\nMD5:" + MD5Util.getMD5String(Utils.sortMap(map)) + "\nmap:" + map);
         Log.d("刷卡报文组件成功，开始计算mac");
         return MD5Util.getMD5String(Utils.sortMap(map)).getBytes();
+    }
+
+    /**
+     * 开始IC卡交易
+     *
+     * @param cardInfo
+     */
+    private void doConsume_IC(final ConsumeData consumeData, final OnConsumeListener consumeListener, CardInfo cardInfo) {
+        //初始化交易流程
+        String sn = android.os.Build.SERIAL;// 终端序列号
+        EmvParameterUtil.getInstance().initEmvParameter(context, sn,
+                "000000000000000", "00000000");// 终端序列号、商户名、商户号(商户名、商户号需要根据实际参数设置)
+        EmvParameterUtil.getInstance().initICParam(KernelConstant.aid);
+        EmvParameterUtil.getInstance().initICPublicKey(KernelConstant.pk);
+
+        // 初始化IC卡交易终端参数
+        EmvProviderImpl.initEmvtermConfig();
+        EmvProviderImpl.setmContext(context);
+        final EmvTransData transData = new EmvTransData();
+        transData.setAmount(Utils.getTransAmount(consumeData.getAmount()));
+        Time tm = new Time();
+        tm.setToNow();
+        String date = String.format("%04d", tm.year)
+                + String.format("%02d", tm.month + 1)
+                + String.format("%02d", tm.monthDay);
+        String time = String.format("%02d", tm.hour)
+                + String.format("%02d", tm.minute)
+                + String.format("%02d", tm.second);
+        transData.setTransDate(date);
+        transData.setTransTime(time);
+        transData.setTransNo("000123"); // 交易流水号（注：根据交易具体参数设置）
+        transData.setTag9Value((byte) 0x00);
+        transData.setCardAuth(true);
+        transData.setForceOnline(true);
+        transData.setSupportSM(false);
+        transData.setSupportEC(false);
+        transData.setSupportCvm(true);
+        // channel type 需要统一定义
+        transData.setChannel(EmvChannel.ICC);
+        // emvFlow 需要统一定义
+        transData.setFlow(EmvConstant.FLOW.COMPLETE);
+
+        PinPadProviderImpl.initPinpad();
+        EmvProviderImpl.process(transData,
+                new EmvTransListener() {
+                    @Override
+                    public int onWaitAppSelect(List<String> list, boolean b) {
+                        Log.d("onWaitAppSelect");
+                        return 0;
+                    }
+
+                    @Override
+                    public int onConfirmCardNo(String cardno) {
+                        Log.d("onConfirmCardNo");
+                        mReqConsumeData.setCardNo(cardno);
+                        // 获取2磁道信息
+                        byte[] track2 = EmvProviderImpl.getTlv(0x57);
+                        String track_2 = BytesUtil.bytes2HexString(track2);
+                        // 获取卡片序列号
+                        byte[] cardSeq = EmvProviderImpl.getTlv(0x5f34);
+                        String card_seq = BytesUtil.bytes2HexString(cardSeq);
+                        // IC卡序列号长度为3
+                        int length = card_seq.length();
+                        if (length < 3) {
+                            for (int i = 0; i < 3 - length; i++) {
+                                card_seq = "0" + card_seq;
+                            }
+                        }
+                        Log.d("cardno:" + cardno);
+                        Log.d("track_2:" + track_2);
+                        Log.d("card_seq:" + card_seq);
+                        return 0;
+                    }
+
+                    @Override
+                    public int onCertVerfiy(String s, String s1) {
+                        Log.d("onCertVerfiy");
+                        return 0;
+                    }
+
+                    @Override
+                    public void onCardHolderPwd(boolean b, int i) {
+                        Log.d("onCardHolderPwd");
+                        consumeListener.onGetCard();
+                    }
+
+                    @Override
+                    public int onOnlineProc(String pinBlock) {
+
+                        Log.d("onOnlineProc");
+                        // 此处可获取IC卡数据做联机、联机成功则返0 emv流程继续 失败则返回非0 内核自动结束流程
+
+                        // 获取2磁道信息
+                        byte[] track2 = EmvProviderImpl.getTlv(0x57);
+                        String track_2 = BytesUtil.bytes2HexString(track2);
+                        // 获取卡片序列号
+                        byte[] cardSeq = EmvProviderImpl.getTlv(0x5f34);
+                        String card_seq = BytesUtil.bytes2HexString(cardSeq);
+                        // IC卡序列号长度为3
+                        int length = card_seq.length();
+                        if (length < 3) {
+                            for (int i = 0; i < 3 - length; i++) {
+                                card_seq = "0" + card_seq;
+                            }
+                        }
+
+                        String field55 = MakeField55.getField55();
+//                            append_d();
+                        Log.d("-----onOnlineProc-----\n" + "等效二磁道：" + track_2
+                                + "\n卡片序列号:" + card_seq + "\n" + "55域数据:" + field55 + "\n");
+                        // IC插卡有效期直接通过tag取值
+                        byte[] cardValidTime = EmvProviderImpl.getTlv(0x5F24);
+                        String cardExpireDate = ByteUtils.toBCDString(cardValidTime)
+                                .substring(0, 4);
+                        Log.d("cardExpireDate:" + cardExpireDate);
+                        Log.d("pinBlock：" + pinBlock);
+                        mReqConsumeData.setICCardData(field55);
+                        mReqConsumeData.setICCardSeqNumber(card_seq);
+                        mReqConsumeData.setCardExpireDate(cardExpireDate);
+                        mReqConsumeData.setPin(pinBlock);
+                        mReqConsumeData.setTrack2Data(track_2);
+                                //卡片数据获取成功，开始组建报文
+                                String data = creatTransData_Consume_ChaKa(consumeData,mReqConsumeData);
+                                Log.d("开始计算mac");
+                                String TMK = preferences.get(context, Key.MainKey, "").toString().trim();
+                                String macKey_e = preferences.get(context, Key.mackey, "").toString().trim();
+                                String macKey_CV = preferences.get(context, Key.mackey_cv, "").toString().trim();
+                                Log.d("传入mac的值:\nTMK:" + TMK + "\nmackey:" + macKey_e + "\nmackeyCv:" + macKey_CV);
+                                Utils.getMac(TMK, macKey_e, macKey_CV, data.getBytes(), new onGetMac() {
+                                    @Override
+                                    public void onSucc(String mac) {
+                                        Log.d("Mac计算成功，" + mac);
+                                        Utils.uploadTransData(context, map, mac.toLowerCase(), "Consume", consumeData.getTimeOut_Internet(), new OnUploadTransDataListener() {
+                                            @Override
+                                            public void onSucc(TransMessage transMessage) {
+                                                if (transMessage.getRespCode().equals("00")) {
+                                                    Log.d("付款成功");
+                                                    consumeListener.onSucc(transMessage);
+                                                }else {
+                                                    Log.e(transMessage.getRespMsg());
+                                                    consumeListener.onError(transMessage.getRespMsg());
+                                                }
+                                            }
+
+                                            @Override
+                                            public void onError(String errorMsg) {
+                                                Log.e("上送交易数据失败，errorMsg：" + errorMsg);
+                                                consumeListener.onError(errorMsg);
+                                            }
+                                        });
+                                    }
+
+                                    @Override
+                                    public void onError(String errorMsg) {
+                                        Log.e("Mac计算失败，" + errorMsg);
+                                        consumeListener.onError(errorMsg);
+                                    }
+                                });
+                        return 0;
+                    }
+
+                    @Override
+                    public void onShowMessage(String s) {
+                        Log.d("onShowMessage");
+
+                    }
+
+                    @Override
+                    public void onSendKey(int i) {
+                        Log.d("onSendKey");
+
+                    }
+
+                    @Override
+                    public void onEndProcess(int i, TransactionData transactionData) {
+                        Log.d("onEndProcess");
+
+                    }
+
+                    @Override
+                    public void onGetEcBance(String s) {
+                        Log.d("onGetEcBance");
+
+                    }
+                });
+    }
+
+
+    /**
+     * 组建插卡消费报文
+     *
+     * @param chaKaData 插卡后终端回调数据的实体对象
+     * @return md5摘要后的byte
+     */
+    private static String creatTransData_Consume_ChaKa(ConsumeData consumeData,ReqConsumeData chaKaData) {
+        map = new TreeMap<>();
+        map.put("version", "1.0");    //版本号	version	M	1.0
+        map.put("termMn", consumeData.getDeviceInfo().getTermMn());    //终端型号	termMn	M
+        map.put("termBn", consumeData.getDeviceInfo().getTermBn());    //终端批号	termBn	M
+        map.put("termSn", consumeData.getDeviceInfo().getTermSn());    //终端序列号	termSn	M
+        map.put("txnType", "01");    //交易类型	txnType	M	01
+        map.put("txnSubType", "00");    //交易子类	txnSubType	M	00
+        map.put("merId", consumeData.getDeviceInfo().getMerId());    //商户号	merId	M
+        map.put("orderId", Utils.getTransTime(TransType.UnKnow));    //商户订单号	orderId	M	同一商户同一交易日内唯一
+        map.put("txnTime",Utils.getSysTime_24());    //订单发送时间	txnTime	M	当前时间，同一终端不应出现相同发送时间的交易请求
+
+        map.put("txnAmt", Utils.getTransAmount(consumeData.getAmount()));    //交易金额	txnAmt	M
+        map.put("currencyCode", "156");    //交易币种	currencyCode	M
+//        if (consumeModle.getOrderMsg() != null && !consumeModle.getOrderMsg().equals("")) {
+//            map.put("orderDesc", consumeModle.getOrderMsg());    //订单描述	orderDesc	O
+//        }
+        map.put("cardType", "002");    //卡类型	cardType	M
+        map.put("cardNo", chaKaData.getCardNo());    //卡号	cardNo	M
+        map.put("pin", chaKaData.getPin());    //密码	pin	C	有输入密码时必传
+        map.put("ICCardData", chaKaData.getICCardData());    //IC卡数据	ICCardData	C	CUPS 55域信息，IC卡交易时必传
+        map.put("ICCardSeqNumber", chaKaData.getICCardSeqNumber());    //IC卡的序列号	ICCardSeqNumber	C
+        if (chaKaData.getTrack2Data().length() == 38) {
+            //第二磁道数据	track2Data	C
+            map.put("track2Data", chaKaData.getTrack2Data().substring(0, chaKaData.getTrack2Data().length() - 1));//2磁
+        } else {
+            map.put("track2Data", chaKaData.getTrack2Data());//2磁
+        }
+//        map.put("", "");    //第三磁道数据	track3Data	C	磁条卡交易时必填，可获取时必填
+        map.put("cardExpireDate", chaKaData.getCardExpireDate());    //卡片效期	cardExpireDate	C	若可获取时必传
+        //排序
+        return MD5Util.getMD5String(Utils.sortMap(map));
     }
 }

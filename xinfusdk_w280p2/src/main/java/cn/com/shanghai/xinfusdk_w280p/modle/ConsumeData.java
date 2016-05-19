@@ -6,17 +6,17 @@ import java.io.Serializable;
  * Created by Administrator on 2016/5/19.
  */
 public class ConsumeData implements Serializable {
-    private String amount = null;/*消费金额，单位：元*/
+    private Double amount = null;/*消费金额，单位：元*/
     private DeviceInfo mDeviceInfo = null;/*设备信息*/
     private int timeOut_Internet = 20;/*网络超时时间*/
     private int timeOut_waitCard = 20;/*等待客户刷卡的超时时间*/
 
 
-    public String getAmount() {
+    public Double getAmount() {
         return amount;
     }
 
-    public void setAmount(String amount) {
+    public void setAmount(Double amount) {
         this.amount = amount;
     }
 

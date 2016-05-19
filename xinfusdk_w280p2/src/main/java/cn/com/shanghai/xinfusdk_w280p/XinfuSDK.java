@@ -13,6 +13,7 @@ import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnUnConsumeListener;
 import cn.com.shanghai.xinfusdk_w280p.usexor.DefaultP;
 import cn.com.shanghai.xinfusdk_w280p.usexor.SDK;
 import cn.com.shanghai.xinfusdk_w280p.utils.Log;
+import cn.com.shanghai.xinfusdk_w280p.utils.Utils;
 
 /**
  * Created by Administrator on 2016/5/19.

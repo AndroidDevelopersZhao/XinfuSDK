@@ -393,4 +393,20 @@ public class Utils {
         }
         return isCheckMackeyOk ? mackey : null;
     }
+
+    /**
+     * 获取12位交易金额
+     *
+     * @param mmmmm
+     * @return
+     */
+    public static String getTransAmount(Double mmmmm) {
+        StringBuffer sb = new StringBuffer();
+        String amountStr = String.valueOf((int) (mmmmm.doubleValue() * 100));
+        for (int i = 0; i < 12 - amountStr.length(); ++i) {
+            sb.append("0");
+        }
+        sb.append(amountStr);
+        return sb.toString();
+    }
 }
