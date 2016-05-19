@@ -27,7 +27,7 @@ public class MainActivity extends AppCompatActivity {
                 xinfuSDK.doSign(deviceInfo, new OnSign() {
                     @Override
                     public void onSucc() {
-                        app("签到成功******************");
+                        app("签到成功");
                     }
 
                     @Override

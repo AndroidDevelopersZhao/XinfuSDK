@@ -18,10 +18,12 @@ import java.util.Map;
 import cn.com.shanghai.xinfusdk_w280p.modle.ConsumeData;
 import cn.com.shanghai.xinfusdk_w280p.modle.DeviceInfo;
 import cn.com.shanghai.xinfusdk_w280p.modle.RespData_DoSign;
+import cn.com.shanghai.xinfusdk_w280p.modle.UnConsumeData;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnConsumeListener;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnGetDeviceInfoListener;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnSign;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnStartRequestListener;
+import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnUnConsumeListener;
 import cn.com.shanghai.xinfusdk_w280p.usexor.DefaultP;
 import cn.com.shanghai.xinfusdk_w280p.usexor.SDK;
 import cn.com.shanghai.xinfusdk_w280p.utils.Key;
@@ -75,7 +77,12 @@ public class W280pDevice implements SDK {
 
     @Override
     public void consume(ConsumeData consumeData, OnConsumeListener consumeListener) {
-        this.doConsme(consumeData,consumeListener);
+        this.doConsme(consumeData, consumeListener);
+    }
+
+    @Override
+    public void unConsume(UnConsumeData unConsumeData, OnUnConsumeListener unConsumeListener) {
+        this.doUnConsume(unConsumeData, unConsumeListener);
     }
 
 
@@ -192,7 +199,24 @@ public class W280pDevice implements SDK {
         });
     }
 
+    /**
+     * 消费交易
+     *
+     * @param consumeData     消费所需参数，详见实体类内部描述
+     * @param consumeListener 执行结果回调
+     */
     private void doConsme(ConsumeData consumeData, OnConsumeListener consumeListener) {
+
+    }
+
+
+    /**
+     * 根据订单号撤销交易
+     *
+     * @param unConsumeData     撤销交易所需参数
+     * @param unConsumeListener 执行结果监听器
+     */
+    private void doUnConsume(UnConsumeData unConsumeData, OnUnConsumeListener unConsumeListener) {
 
     }
     /************************************************************************************************/

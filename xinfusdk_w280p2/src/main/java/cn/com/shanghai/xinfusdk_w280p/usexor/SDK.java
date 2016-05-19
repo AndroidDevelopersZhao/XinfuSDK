@@ -2,9 +2,11 @@ package cn.com.shanghai.xinfusdk_w280p.usexor;
 
 import cn.com.shanghai.xinfusdk_w280p.modle.ConsumeData;
 import cn.com.shanghai.xinfusdk_w280p.modle.DeviceInfo;
+import cn.com.shanghai.xinfusdk_w280p.modle.UnConsumeData;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnConsumeListener;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnGetDeviceInfoListener;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnSign;
+import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnUnConsumeListener;
 
 /**
  * Created by Administrator on 2016/5/19.
@@ -32,4 +34,12 @@ public interface SDK {
      * @param consumeListener 执行结果回调
      */
     void consume(ConsumeData consumeData, OnConsumeListener consumeListener);
+
+    /**
+     * 根据订单号撤销交易
+     *
+     * @param unConsumeData     撤销交易所需参数
+     * @param unConsumeListener 执行结果监听器
+     */
+    void unConsume(UnConsumeData unConsumeData, OnUnConsumeListener unConsumeListener);
 }
