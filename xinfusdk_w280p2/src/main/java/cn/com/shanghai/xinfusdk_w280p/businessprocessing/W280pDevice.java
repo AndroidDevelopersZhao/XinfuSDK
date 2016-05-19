@@ -6,28 +6,44 @@ import android.os.SystemClock;
 
 import com.google.gson.Gson;
 import com.landicorp.android.eptandapi.pinpad.Pinpad;
+import com.landicorp.android.eptapi.DeviceService;
+import com.landicorp.android.eptapi.exception.ReloginException;
+import com.landicorp.android.eptapi.exception.RequestException;
+import com.landicorp.android.eptapi.exception.ServiceOccupiedException;
+import com.landicorp.android.eptapi.exception.UnsupportMultiProcess;
+import com.landicorp.entity.CardInfo;
 import com.landicorp.entity.KeyInfo;
 import com.landicorp.entity.PinPadConstant;
+import com.landicorp.impl.CardReaderProviderImpl;
 import com.landicorp.impl.PinPadProviderImpl;
+import com.landicorp.listener.CardReaderListener;
+import com.landicorp.listener.PinPadListener;
 import com.landicorp.util.ByteUtils;
 
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import cn.com.shanghai.xinfusdk_w280p.modle.ConsumeData;
 import cn.com.shanghai.xinfusdk_w280p.modle.DeviceInfo;
+import cn.com.shanghai.xinfusdk_w280p.modle.ReqConsumeData;
 import cn.com.shanghai.xinfusdk_w280p.modle.RespData_DoSign;
+import cn.com.shanghai.xinfusdk_w280p.modle.TransMessage;
 import cn.com.shanghai.xinfusdk_w280p.modle.UnConsumeData;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnConsumeListener;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnGetDeviceInfoListener;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnSign;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnStartRequestListener;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnUnConsumeListener;
+import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnUploadTransDataListener;
+import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.onGetMac;
 import cn.com.shanghai.xinfusdk_w280p.usexor.DefaultP;
 import cn.com.shanghai.xinfusdk_w280p.usexor.SDK;
+import cn.com.shanghai.xinfusdk_w280p.usexor.TransType;
 import cn.com.shanghai.xinfusdk_w280p.utils.Key;
 import cn.com.shanghai.xinfusdk_w280p.utils.Log;
+import cn.com.shanghai.xinfusdk_w280p.utils.MD5Util;
 import cn.com.shanghai.xinfusdk_w280p.utils.Utils;
 import cn.com.shanghai.xinfusdk_w280p.utils.XXSharedPreferences;
 
@@ -35,9 +51,11 @@ import cn.com.shanghai.xinfusdk_w280p.utils.XXSharedPreferences;
  * Created by Administrator on 2016/5/19.
  */
 public class W280pDevice implements SDK {
+    private static TreeMap<String, String> map;
     private Context context = null;
     private long startTime = 0L;
     private XXSharedPreferences preferences = null;
+    private ReqConsumeData mReqConsumeData;
 
     public W280pDevice(Context context) {
         this.context = context;
@@ -205,8 +223,110 @@ public class W280pDevice implements SDK {
      * @param consumeData     消费所需参数，详见实体类内部描述
      * @param consumeListener 执行结果回调
      */
-    private void doConsme(ConsumeData consumeData, OnConsumeListener consumeListener) {
+    private void doConsme(final ConsumeData consumeData, final OnConsumeListener consumeListener) {
+        startTime = thisTime();
+        Log.d("start consume...");
+        loginDevice();
+        mReqConsumeData = new ReqConsumeData();
+        Log.d("will read card info,please inser or flush card.");
+        CardReaderProviderImpl.readCard(consumeData.getTimeOut_waitCard(), (byte) 0x07, new CardReaderListener() {
+            @Override
+            public void onReadCardSucc(final CardInfo cardInfo) {
+                Log.d("read cardinfo success,cardInfo:" + cardInfo);
+                switch (cardInfo.getCardType()) {
 
+                    case CardInfo.CARD_MAG:
+                        //磁条卡
+                        Log.d("检测到磁条卡");
+                        Log.d("cardInfo-CardType:" + cardInfo.getCardType());
+                        Log.d("cardInfo-CardNo:" + cardInfo.getCardNo());
+                        Log.d("cardInfo-ExpDate:" + cardInfo.getExpDate());
+                        Log.d("cardInfo-ServiceCode:" + cardInfo.getServiceCode());
+                        Log.d("cardInfo-Track:" + cardInfo.getTrack());
+                        Log.d("cardInfo-Track1:" + cardInfo.getTrack1());
+                        Log.d("cardInfo-Track2:" + cardInfo.getTrack2());
+                        Log.d("cardInfo-Track3:" + cardInfo.getTrack3());
+                        consumeListener.onGetCard();
+//                        XXSVProgressHUD.showWithStatus(MainActivity.this, "请在输入密码后点击确定键");
+                        PinPadProviderImpl.loginDevice(context);
+                        PinPadProviderImpl.initPinpad();
+                        PinPadProviderImpl.inputOnlinePin(consumeData.getTimeOut_waitCard(), cardInfo.getCardNo(), Pinpad.KEYOFFSET_PINKEY, 1, new PinPadListener() {
+                            @Override
+                            public void onInputResult(int i, byte[] bytes) {
+                                Log.d("输入完成，" + Utils.byteArratToHexString(bytes));
+                                Log.d("start mack consume data and sorp...");
+                                byte[] b = creatTransData_Consume_ShuaKa(consumeData, cardInfo, Utils.byteArratToHexString(bytes));
+                                String TMK = preferences.get(context, Key.MainKey, "").toString().trim();
+                                String macKey_e = preferences.get(context, Key.mackey, "").toString().trim();
+                                String macKey_CV = preferences.get(context,  Key.mackey_cv, "").toString().trim();
+                                Log.d("传入mac的值:\nTMK:" + TMK + "\nmackey:" + macKey_e + "\nmackeyCv:" + macKey_CV);
+
+                                Utils.getMac(TMK, macKey_e, macKey_CV, b, new onGetMac() {
+                                    @Override
+                                    public void onSucc(String mac) {
+                                        Utils.uploadTransData(context, map, mac.toLowerCase(), "Consume", consumeData.getTimeOut_Internet(), new OnUploadTransDataListener() {
+                                            @Override
+                                            public void onSucc(TransMessage transMessage) {
+                                                if (transMessage.getRespCode().equals("00")) {
+                                                    Log.d("consume successful in " + useTime() + " ms.");
+                                                    Log.d("consume success,data was resped");
+                                                    consumeListener.onSucc(transMessage);
+                                                } else {
+                                                    Log.e("consume was error," + transMessage.getRespMsg());
+                                                    consumeListener.onError(transMessage.getRespMsg());
+                                                }
+                                            }
+
+                                            @Override
+                                            public void onError(String errorMsg) {
+                                                Log.e("consume was error:" + errorMsg);
+                                                consumeListener.onError(errorMsg);
+                                            }
+                                        });
+                                    }
+
+                                    @Override
+                                    public void onError(String errorMsg) {
+                                        Log.e("mac cle error:" + errorMsg);
+                                        consumeListener.onError(errorMsg);
+                                    }
+                                });
+
+
+                            }
+
+                            @Override
+                            public void onSendKey(int i, int i1) {
+                                Log.d("正在输入..." + i + "," + i1);
+                            }
+                        });
+//
+                        break;
+                    case CardInfo.CARD_INSERT:
+                        //IC卡
+
+                        break;
+
+                    case CardInfo.CARD_CLSS:
+                        //非接卡
+                        Log.d("检测到非接卡");
+                        break;
+                    case CardInfo.CARD_UNKNOW:
+                        // 未知
+                        Log.d("unknow card type");
+                        break;
+                }
+
+            }
+
+            @Override
+            public void onReadCardErr(int errorcode, int cardType) {
+                CardReaderProviderImpl.stopReadCard();
+                consumeListener.onError("卡片读取失败");
+                Log.e("read cardinfo error,errorcode:" + errorcode + ",cardType:" + cardType);
+
+            }
+        });
     }
 
 
@@ -245,8 +365,68 @@ public class W280pDevice implements SDK {
         int pinpadret = PinPadProviderImpl.loadKey(keyInfo);
         if (pinpadret == 0) {
             Log.d("mainkey load success");
+            if (preferences==null){
+                preferences=new XXSharedPreferences(DefaultP.FILE_NAME_DEVICE_INFO_SHAREDPREFERENCE);
+            }
+            preferences.put(context,Key.MainKey,DefaultP.MainKey);
         } else {
             Log.e("load mainkey was error");
         }
+    }
+
+    private void loginDevice() {
+        try {
+            DeviceService.login(context);
+        } catch (RequestException e) {
+            e.printStackTrace();
+        } catch (ServiceOccupiedException e) {
+            e.printStackTrace();
+        } catch (ReloginException e) {
+            e.printStackTrace();
+        } catch (UnsupportMultiProcess e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    /**
+     * 组件刷卡消费报文
+     *
+     * @param cardInfo 刷卡后终端回调数据的实体对象
+     */
+    private static byte[] creatTransData_Consume_ShuaKa(ConsumeData consumeData, CardInfo cardInfo, String pin) {
+        map = new TreeMap<>();
+
+        map.put("version", "1.0");    //版本号	version	M	1.0
+        map.put("termMn", consumeData.getDeviceInfo().getTermMn());    //终端型号	termMn	M
+        map.put("termBn", consumeData.getDeviceInfo().getTermBn());    //终端批号	termBn	M
+        map.put("termSn", consumeData.getDeviceInfo().getTermSn());    //终端序列号	termSn	M
+        map.put("txnType", "01");    //交易类型	txnType	M	01
+        map.put("txnSubType", "00");    //交易子类	txnSubType	M	00
+        map.put("merId", consumeData.getDeviceInfo().getMerId());    //商户号	merId	M
+        map.put("orderId", Utils.getTransTime(TransType.UnKnow));    //商户订单号	orderId	M	同一商户同一交易日内唯一
+        map.put("txnTime", Utils.getSysTime_24());    //订单发送时间	txnTime	M	当前时间，同一终端不应出现相同发送时间的交易请求
+        map.put("txnAmt", "000000001000");    //交易金额	txnAmt	M
+        map.put("currencyCode", "156");    //交易币种	currencyCode	M
+//        if (consumeModle.getOrderMsg() != null && !consumeModle.getOrderMsg().equals("")) {
+//            map.put("orderDesc", consumeModle.getOrderMsg());    //订单描述	orderDesc	O
+//        }
+
+        map.put("cardType", "001");    //卡类型	cardType	M
+        map.put("cardNo", cardInfo.getCardNo());    //卡号	cardNo	M
+        map.put("pin", pin);    //密码	pin	C	有输入密码时必传
+        String t2 = cardInfo.getTrack2().replace("=", "d");
+        if (t2.length() == 38) {
+            //第二磁道数据	track2Data	C
+            map.put("track2Data", t2.substring(0, t2.length() - 1));//2磁
+        } else {
+            map.put("track2Data", t2);//2磁
+        }
+        if (cardInfo.getTrack3() != null && !cardInfo.getTrack3().equals("")) {
+            map.put("track3Data", cardInfo.getTrack3());    //第三磁道数据	track3Data	C	磁条卡交易时必填，可获取时必填
+        }
+        Log.d("刷卡报文：\nMD5:" + MD5Util.getMD5String(Utils.sortMap(map)) + "\nmap:" + map);
+        Log.d("刷卡报文组件成功，开始计算mac");
+        return MD5Util.getMD5String(Utils.sortMap(map)).getBytes();
     }
 }

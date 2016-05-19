@@ -12,6 +12,8 @@ public final class Key {
 
     public static final String mackey = "mackey";
     public static final String mackey_cv = "mackey_cv";
+    public static final String MainKey = "MainKey";
+
 
 
 
