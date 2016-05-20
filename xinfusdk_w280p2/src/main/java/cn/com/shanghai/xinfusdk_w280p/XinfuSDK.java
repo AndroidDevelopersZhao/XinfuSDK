@@ -5,8 +5,10 @@ import android.content.Context;
 import cn.com.shanghai.xinfusdk_w280p.businessprocessing.W280pDevice;
 import cn.com.shanghai.xinfusdk_w280p.modle.ConsumeData;
 import cn.com.shanghai.xinfusdk_w280p.modle.DeviceInfo;
+import cn.com.shanghai.xinfusdk_w280p.modle.GetBalanceData;
 import cn.com.shanghai.xinfusdk_w280p.modle.UnConsumeData;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnConsumeListener;
+import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnGetBalanceListener;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnGetDeviceInfoListener;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnSign;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnUnConsumeListener;
@@ -103,6 +105,20 @@ public class XinfuSDK {
             unConsumeListener.onError("撤销交易所需参数不能为空");
             return;
         }
-        sdk.unConsume(unConsumeData,unConsumeListener);
+        sdk.unConsume(unConsumeData, unConsumeListener);
+    }
+
+    /**
+     * 查询余额
+     *
+     * @param getBalanceData     查余参数
+     * @param getBalanceListener 执行结果监听器
+     */
+    public void getBalance(GetBalanceData getBalanceData, OnGetBalanceListener getBalanceListener) {
+        if (getBalanceData == null) {
+            getBalanceListener.onError("查余交易所需参数不能为空");
+            return;
+        }
+        sdk.getBalance(getBalanceData, getBalanceListener);
     }
 }

@@ -5,7 +5,7 @@ import java.io.Serializable;
 /**
  * Created by Administrator on 2016/5/19.
  */
-public class ReqConsumeData implements Serializable {
+public class ReqICCardData implements Serializable {
     private String cardNo = null;
     private String pin = null;
     private String ICCardData = null;//55

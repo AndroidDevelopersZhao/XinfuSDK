@@ -6,5 +6,9 @@ package cn.com.shanghai.xinfusdk_w280p.useunxor.listener;
 public interface OnUnConsumeListener {
     void onSucc();
 
+    void onGetCard();
+
+    void onPswInPutDown();
+
     void onError(String errorMsg);
 }

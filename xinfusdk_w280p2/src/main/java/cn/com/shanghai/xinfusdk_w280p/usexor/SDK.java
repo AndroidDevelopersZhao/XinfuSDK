@@ -2,8 +2,10 @@ package cn.com.shanghai.xinfusdk_w280p.usexor;
 
 import cn.com.shanghai.xinfusdk_w280p.modle.ConsumeData;
 import cn.com.shanghai.xinfusdk_w280p.modle.DeviceInfo;
+import cn.com.shanghai.xinfusdk_w280p.modle.GetBalanceData;
 import cn.com.shanghai.xinfusdk_w280p.modle.UnConsumeData;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnConsumeListener;
+import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnGetBalanceListener;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnGetDeviceInfoListener;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnSign;
 import cn.com.shanghai.xinfusdk_w280p.useunxor.listener.OnUnConsumeListener;
@@ -42,4 +44,13 @@ public interface SDK {
      * @param unConsumeListener 执行结果监听器
      */
     void unConsume(UnConsumeData unConsumeData, OnUnConsumeListener unConsumeListener);
+
+
+    /**
+     * 查询余额
+     *
+     * @param getBalanceData     查余参数
+     * @param getBalanceListener 执行结果监听器
+     */
+    void getBalance(GetBalanceData getBalanceData, OnGetBalanceListener getBalanceListener);
 }
